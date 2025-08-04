@@ -1,0 +1,30 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const body_parser_1 = __importDefault(require("body-parser"));
+const database_1 = require("./database");
+const config_1 = require("./config");
+const cors_1 = __importDefault(require("cors"));
+const main_routes_1 = require("./routes/main_routes");
+const main_routes_2 = require("./routes/main_routes");
+const app = (0, express_1.default)();
+app.use((0, cors_1.default)());
+app.use(body_parser_1.default.json());
+app.use(body_parser_1.default.urlencoded({ extended: true }));
+app.use('/uploads', express_1.default.static('uploads'));
+app.use((0, cors_1.default)({ origin: '*' }));
+(0, main_routes_1.configureVerificationRoutes)(app);
+(0, main_routes_1.configureCartRoutes)(app);
+(0, main_routes_1.configureProductRoutes)(app);
+(0, main_routes_1.configureWishlistRoutes)(app);
+(0, main_routes_1.configureOrderRoutes)(app);
+(0, main_routes_1.configureAuthRoutes)(app);
+(0, database_1.connectToDatabase)();
+(0, main_routes_2.configureAdminRoutes)(app);
+(0, main_routes_1.configureUserRoutes)(app);
+app.listen(config_1.PORT, () => {
+    console.log(`🚀 Server running at http://test0.gpstrack.in:${config_1.PORT}`);
+});
