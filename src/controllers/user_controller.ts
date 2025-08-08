@@ -19,23 +19,23 @@ export class UserController {
     }
   }
 
-  static async ioGetUserProfile(req: Request, res: Response) {
-    try {
-      const phoneNumber = (req as any).user?.phoneNumber;
-      const token = (req as any).user?.token;
+static async ioGetUserProfile(req: Request, res: Response) {
+  try {
+    const { user } = req.body;
 
-      if (!token) {
-        return res.status(401).json({ message: 'Token is required' });
-      }
-
-      const user = await getUserByPhoneNumber(phoneNumber);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      res.json(user);
-    } catch (error) {
-      console.error('Error in ioGetUserProfile:', error);
-      res.status(500).json({ message: 'Server error' });
+    if (!user || !user.phoneNumber || !user.token) {
+      return res.status(400).json({ message: 'Phone number and token are required' });
     }
+
+    const foundUser = await getUserByPhoneNumber(user.phoneNumber);
+    if (!foundUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json(foundUser);
+  } catch (error) {
+    console.error('Error in ioGetUserProfile:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
+}
 }

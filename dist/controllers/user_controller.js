@@ -30,22 +30,20 @@ class UserController {
     }
     static ioGetUserProfile(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
             try {
-                const phoneNumber = (_a = req.user) === null || _a === void 0 ? void 0 : _a.phoneNumber;
-                const token = (_b = req.user) === null || _b === void 0 ? void 0 : _b.token;
-                if (!token) {
-                    return res.status(401).json({ message: 'Token is required' });
+                const { user } = req.body;
+                if (!user || !user.phoneNumber || !user.token) {
+                    return res.status(400).json({ message: 'Phone number and token are required' });
                 }
-                const user = yield (0, user_service_1.getUserByPhoneNumber)(phoneNumber);
-                if (!user) {
+                const foundUser = yield (0, user_service_1.getUserByPhoneNumber)(user.phoneNumber);
+                if (!foundUser) {
                     return res.status(404).json({ message: 'User not found' });
                 }
-                res.json(user);
+                return res.json(foundUser);
             }
             catch (error) {
                 console.error('Error in ioGetUserProfile:', error);
-                res.status(500).json({ message: 'Server error' });
+                return res.status(500).json({ message: 'Server error' });
             }
         });
     }

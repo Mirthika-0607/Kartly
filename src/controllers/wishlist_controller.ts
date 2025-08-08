@@ -28,15 +28,14 @@ export class WishlistController {
   static async ioGetWishlist(req: Request, res: Response) {
     try {
       const phoneNumber = (req as any).user?.phoneNumber;
-      if (!phoneNumber) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
+        if (!phoneNumber) {
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
       const result = await getWishlist(phoneNumber);
       res.json(result);
     } catch (error) {
-      console.error('Error in ioGetWishlist:', error);
-      res.status(500).json({ message: 'Server error' });
+        console.error('Error in ioGetWishlist:', error);
+        res.status(500).json({ message: 'Server error' });
     }
   }
 

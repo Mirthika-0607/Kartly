@@ -12,5 +12,6 @@ const productSchema = new mongoose_1.default.Schema({
     productPrice: { type: Number },
     productCategory: { type: String },
     productImage: { type: String },
+    productRating: { type: Number },
 }, { timestamps: true }); // Enable timestamps
 exports.ProductModel = mongoose_1.default.model('Product', productSchema);

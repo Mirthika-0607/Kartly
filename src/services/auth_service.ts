@@ -4,6 +4,7 @@ import { JWT_SECRET } from '../config';
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
+  console.log('Authorization Header:', authHeader);
   const token = authHeader?.split(' ')[1]; 
 
   if (!token) return res.status(401).json({ message: 'Access token missing' });

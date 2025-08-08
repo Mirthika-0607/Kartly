@@ -48,12 +48,12 @@ export class AuthController {
     }
   }
 
-    static async ioProtectedProfile(req: Request, res: Response) {
-    try {
-      await handleProtectedProfile(req, res);
-    } catch (error) {
-      console.error('Error in ioProtectedProfile:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
+static async ioProtectedProfile(req: Request, res: Response) {
+  try {
+    await handleProtectedProfile(req, res);
+  } catch (error) {
+    console.error('Error in ioProtectedProfile:', error);
+    res.status(500).json({ message: 'Server error' });
   }
+}
 }
