@@ -10,7 +10,7 @@ class Product {
   String? productPrice;
   String? productCategory;
   String? productImage;
-
+  double? productRating;
   Product({
     this.productId,
     this.productName,
@@ -18,6 +18,7 @@ class Product {
     this.productPrice,
     this.productCategory,
     this.productImage,
+    this.productRating,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);

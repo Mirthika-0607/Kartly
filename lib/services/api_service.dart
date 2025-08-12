@@ -5,10 +5,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/phone_number_generate_screen.dart';
 import '../models/product_model.dart';
 import '../models/user_model.dart';
-
+import '../utils/theme.dart';
 
 class ApiService {
   static const String _baseUrl = 'http://test0.gpstrack.in:8004';
+
+  Future<String?> getUserPhoneNumber(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final phoneNumber = prefs.getString('phoneNumber');
+    if (phoneNumber == null) {
+      showError(context, 'No phone number found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+    return phoneNumber;
+  }
 
 
   Future<Map<String, dynamic>> generateNumber(String phoneNumber) async {
@@ -89,6 +100,41 @@ class ApiService {
     }
   }
 
+  // Fetch product rating
+  Future<Map<String, dynamic>?> fetchProductRating(BuildContext context,
+      String productId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/product_array/getavgrating'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'productId': productId}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['error'] ?? 'Failed to fetch rating');
+        return null;
+      }
+    } catch (e) {
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
 
   Future<List<Map<String, dynamic>>> fetchWishlist(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -162,7 +208,8 @@ class ApiService {
   }
 
 
-  Future<void> removeFromWishlist(BuildContext context, String productId) async {
+  Future<void> removeFromWishlist(BuildContext context,
+      String productId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -189,7 +236,8 @@ class ApiService {
         showSuccess(context, 'Removed from wishlist');
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to remove from wishlist');
+        showError(
+            context, errorData['message'] ?? 'Failed to remove from wishlist');
       }
     } catch (e) {
       showError(context, 'Network error. Please try again.');
@@ -197,7 +245,8 @@ class ApiService {
   }
 
 
-  Future<User?> fetchUserProfile(BuildContext context, String phoneNumber) async {
+  Future<User?> fetchUserProfile(BuildContext context,
+      String phoneNumber) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -230,7 +279,8 @@ class ApiService {
         return User.fromJson(data);
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to fetch user profile');
+        showError(
+            context, errorData['message'] ?? 'Failed to fetch user profile');
         return null;
       }
     } catch (e) {
@@ -240,7 +290,8 @@ class ApiService {
   }
 
 
-  Future<bool> createOrUpdateUser(BuildContext context, Map<String, dynamic> userData, String phoneNumber) async {
+  Future<bool> createOrUpdateUser(BuildContext context,
+      Map<String, dynamic> userData, String phoneNumber) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -276,7 +327,8 @@ class ApiService {
         return true;
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to save user profile');
+        showError(
+            context, errorData['message'] ?? 'Failed to save user profile');
         return false;
       }
     } catch (e) {
@@ -314,108 +366,136 @@ class ApiService {
     }
   }
 
-
-  Future<Map<String, dynamic>?> createCart(BuildContext context, String productId) async {
+  Future<Map<String, dynamic>?> addOrUpdateCart(BuildContext context, String productId, String? action) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final phoneNumber = prefs.getString('phoneNumber');
 
-
-    if (token == null) {
-      showError(context, 'No token found. Please log in again.');
+    if (token == null || phoneNumber == null) {
+      showError(context, 'No token or phone number found. Please log in again.');
       _navigateToGenerateScreen(context);
       return null;
     }
 
-
     try {
+      final body = {
+        'productId': productId,
+        'phoneNumber': phoneNumber,
+        if (action != null) 'action': action,
+      };
+
       final response = await http.post(
-        Uri.parse('$_baseUrl/cart_array/create'),
+        Uri.parse('$_baseUrl/cart_array/addorupdate'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'items': [
-            {
-              'productId': productId,
-              'quantity': 1,
-            }
-          ],
-        }),
+        body: jsonEncode(body),
       );
-
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to add to cart');
+        showError(context, errorData['message'] ?? 'Failed to add/update cart');
         return null;
       }
     } catch (e) {
+      debugPrint('Error in addOrUpdateCart: $e');
       showError(context, 'Network error. Please try again.');
       return null;
     }
   }
 
-
-  Future<double?> updateCart(BuildContext context, String cartId, String productId, int quantity) async {
+  Future<Map<String, dynamic>?> removeCartItem(BuildContext context, String productId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final phoneNumber = prefs.getString('phoneNumber');
 
-
-    if (token == null) {
-      showError(context, 'No token found. Please log in again.');
+    if (token == null || phoneNumber == null) {
+      showError(context, 'No token or phone number found. Please log in again.');
       _navigateToGenerateScreen(context);
       return null;
     }
 
-
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/cart_array/update'),
+        Uri.parse('$_baseUrl/cart_array/removeitem'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'id': cartId,
-          'items': [
-            {
-              'productId': productId,
-              'quantity': quantity,
-            }
-          ],
+          'productId': productId,
+          'phoneNumber': phoneNumber,
         }),
       );
 
-
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return (responseData['totalPrice'] ?? 0.0).toDouble();
+        return jsonDecode(response.body);
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to update cart');
+        showError(context, errorData['message'] ?? 'Failed to remove item from cart');
         return null;
       }
     } catch (e) {
+      debugPrint('Error in removeCartItem: $e');
       showError(context, 'Network error. Please try again.');
       return null;
     }
   }
 
+  Future<List<Map<String, dynamic>>?> getCartList(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final phoneNumber = prefs.getString('phoneNumber');
+
+    if (token == null || phoneNumber == null) {
+      showError(context, 'No token or phone number found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/cart_array/getdata'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'phoneNumber': phoneNumber}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return [data]; // Wrap single cart object in a list for consistency
+        } else {
+          showError(context, 'Invalid cart data format');
+          return null;
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to fetch cart');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in getCartList: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
 
   Future<void> deleteCart(BuildContext context, String cartId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final phoneNumber = prefs.getString('phoneNumber');
 
-
-    if (token == null) {
-      showError(context, 'No token found. Please log in again.');
+    if (token == null || phoneNumber == null) {
+      showError(context, 'No token or phone number found. Please log in again.');
       _navigateToGenerateScreen(context);
       return;
     }
-
 
     try {
       final response = await http.post(
@@ -426,26 +506,39 @@ class ApiService {
         },
         body: jsonEncode({
           'cartId': cartId,
+          'phoneNumber': phoneNumber,
         }),
       );
 
-
       if (response.statusCode == 200) {
-        showError(context, 'Item removed from cart');
+        showSuccess(context, 'Cart cleared');
       } else {
         final errorData = jsonDecode(response.body);
-        showError(context, errorData['message'] ?? 'Failed to remove item');
+        showError(context, errorData['message'] ?? 'Failed to clear cart');
       }
     } catch (e) {
+      debugPrint('Error in deleteCart: $e');
       showError(context, 'Network error. Please try again.');
     }
   }
 
 
-  static void showError(BuildContext context, String message) {
+  static void showError(BuildContext context, String message,
+      {bool isError = true}) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(
+          content: Text(
+            message,
+            style: TextStyle(
+              color: AppColors.beige,
+              fontSize: 16,
+            ),
+          ),
+          backgroundColor: isError ? Colors.red : AppColors.teal,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -469,4 +562,3 @@ class ApiService {
     }
   }
 }
-
