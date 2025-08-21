@@ -38,7 +38,7 @@ class _WishlistScreenState extends State<WishlistScreen> with SingleTickerProvid
   void didUpdateWidget(WishlistScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.searchQuery != widget.searchQuery) {
-      _fetchWishlistProducts(); // Re-fetch or filter wishlist when search query changes
+      _fetchWishlistProducts();
     }
   }
 
@@ -260,7 +260,7 @@ class _WishlistScreenState extends State<WishlistScreen> with SingleTickerProvid
       itemBuilder: (context, index) {
         final product = products[index];
         return Card(
-          color: AppColors.beige,
+          color: Colors.white, // Updated to white for highlighting
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           elevation: 4,
           shape: RoundedRectangleBorder(
