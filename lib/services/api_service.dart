@@ -100,24 +100,13 @@ class ApiService {
     }
   }
 
-  // Fetch product rating
-  Future<Map<String, dynamic>?> fetchProductRating(BuildContext context,
-      String productId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      showError(context, 'No token found. Please log in again.');
-      _navigateToGenerateScreen(context);
-      return null;
-    }
-
+  Future<Map<String, dynamic>?> fetchProductRating(BuildContext context, String productId) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/product_array/getavgrating'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer your_token', // Replace with actual token
         },
         body: jsonEncode({'productId': productId}),
       );
@@ -125,12 +114,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        final errorData = jsonDecode(response.body);
-        showError(context, errorData['error'] ?? 'Failed to fetch rating');
-        return null;
+        throw Exception('Failed to fetch product rating: ${response.statusCode}');
       }
     } catch (e) {
-      showError(context, 'Network error. Please try again.');
+      debugPrint('Error fetching product rating: $e');
       return null;
     }
   }
@@ -521,6 +508,280 @@ class ApiService {
       showError(context, 'Network error. Please try again.');
     }
   }
+
+
+  Future<Map<String, dynamic>?> addOrUpdateOrder(BuildContext context, {required String phoneNumber, String? orderId, String? productId, String? action}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final body = {
+        'phoneNumber': phoneNumber,
+        if (orderId != null) 'orderId': orderId,
+        if (productId != null) 'productId': productId,
+        if (action != null) 'action': action,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/order_array/create'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to add/update order');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in addOrUpdateOrder: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>?> getOrders(BuildContext context, String phoneNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/order_array/getdata'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'phoneNumber': phoneNumber}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return data.cast<Map<String, dynamic>>();
+        } else {
+          showError(context, 'Invalid order data format');
+          return null;
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to fetch orders');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in getOrders: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> deleteOrder(BuildContext context, String phoneNumber, String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/order_array/delete'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'phoneNumber': phoneNumber,
+          'orderId': orderId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to delete order');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in deleteOrder: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> mockPayment(BuildContext context, String phoneNumber, String orderId, double amount) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/order_array/mockpayment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'phoneNumber': phoneNumber,
+          'orderId': orderId,
+          'amount': amount,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to process payment');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in mockPayment: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkPaymentSuccess(BuildContext context, String phoneNumber, String orderId, double amount) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/order_array/paymentsuccess'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'phoneNumber': phoneNumber,
+          'orderId': orderId,
+          'amount': amount,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorData = jsonDecode(response.body);
+        showError(context, errorData['message'] ?? 'Failed to check payment');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error in checkPaymentSuccess: $e');
+      showError(context, 'Network error. Please try again.');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> createReview(
+      BuildContext context, {
+        required String productId,
+        required int userRating,
+        required String userReview,
+      }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/review_array/createreview'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'productId': productId,
+          'userRating': userRating,
+          'userReview': userReview,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to create review: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error creating review: $e');
+      throw e;
+    }
+  }
+
+
+
+  Future<List<dynamic>?> fetchProductReviews(BuildContext context, String productId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null) {
+      showError(context, 'No token found. Please log in again.');
+      _navigateToGenerateScreen(context);
+      return null;
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/review_array/getreview'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'productId': productId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data is List) {
+          return data;
+        } else if (data is Map<String, dynamic> && data['reviews'] is List) {
+          return data['reviews'];
+        } else {
+          return [];
+        }
+      } else {
+        throw Exception('Failed to fetch product reviews: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching product reviews: $e');
+      return null;
+    }
+  }
+
+
 
 
   static void showError(BuildContext context, String message,

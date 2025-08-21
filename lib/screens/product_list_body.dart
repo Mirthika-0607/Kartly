@@ -3,12 +3,12 @@ import 'dart:convert';
 import '../models/product_model.dart';
 import '../services/api_service.dart';
 import '../utils/theme.dart';
+import './order_detail_screen.dart'; // Add this import for OrderDetailScreen
 
 class ProductList extends StatefulWidget {
   final String phoneNumber;
   final Function(Product) onProductSelected;
   final String searchQuery;
-
   const ProductList({
     Key? key,
     required this.phoneNumber,
@@ -161,28 +161,6 @@ class _ProductListState extends State<ProductList> with SingleTickerProviderStat
         ApiService.showError(context, 'Wishlist operation failed: $e');
       }
     }
-  }
-
-  Future<void> _showCartBottomSheet() async {
-    final cartData = await ApiService().getCartList(context);
-
-    // Show SnackBar and exit if cart is empty
-    if (cartData == null || cartData.isEmpty || cartData[0]['items'].isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cart is empty'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Only show bottom sheet if cart has items
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => CartBottomSheet(cartData: cartData),
-    );
   }
 
   List<Product> getFilteredProducts(String? category) {
@@ -396,92 +374,53 @@ class _ProductListState extends State<ProductList> with SingleTickerProviderStat
     return Scaffold(
       key: _scaffoldKey,
       drawer: _buildFilterDrawer(),
-      body: Stack(
-        children: [
-          _isLoading
-              ? Center(child: CircularProgressIndicator(color: AppColors.darkBlue))
-              : _errorMessage != null
-              ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.teal,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _fetchProducts,
-                  style: AppColors.primaryButtonStyle(),
-                  child: Text(
-                    'Retry',
-                    style: TextStyle(color: AppColors.beige),
-                  ),
-                ),
-              ],
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: AppColors.darkBlue))
+          : _errorMessage != null
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.teal,
+              ),
             ),
-          )
-              : Column(
-            children: [
-              TabBar(
-                controller: _tabController,
-                indicatorColor: AppColors.darkBlue,
-                labelColor: AppColors.darkBlue,
-                unselectedLabelColor: AppColors.teal,
-                tabs: const [
-                  Tab(icon: Icon(Icons.filter_list)),
-                  Tab(text: 'Dresses'),
-                  Tab(text: 'Sandals'),
-                ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchProducts,
+              style: AppColors.primaryButtonStyle(),
+              child: Text(
+                'Retry',
+                style: TextStyle(color: AppColors.beige),
               ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildProductList(getFilteredProducts(null)), // Show all filtered products
-                    _buildProductList(getFilteredProducts('Dresses')),
-                    _buildProductList(getFilteredProducts('Sandals')),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 80), // Space to prevent overlap with fixed button
+            ),
+          ],
+        ),
+      )
+          : Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.darkBlue,
+            labelColor: AppColors.darkBlue,
+            unselectedLabelColor: AppColors.teal,
+            tabs: const [
+              Tab(icon: Icon(Icons.filter_list)),
+              Tab(text: 'Dresses'),
+              Tab(text: 'Sandals'),
             ],
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.teal,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: ElevatedButton(
-                onPressed: _showCartBottomSheet,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: AppColors.beige,
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  elevation: 0, // Remove shadow to merge with bottom
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                ),
-                child: Text(
-                  'View Cart',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildProductList(getFilteredProducts(null)), // Show all filtered products
+                _buildProductList(getFilteredProducts('Dresses')),
+                _buildProductList(getFilteredProducts('Sandals')),
+              ],
             ),
           ),
         ],
@@ -518,33 +457,61 @@ class _ProductListState extends State<ProductList> with SingleTickerProviderStat
       itemCount: products.length,
       itemBuilder: (context, index) {
         final product = products[index];
-        return Card(
-          color: AppColors.beige,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: _buildProductImage(product),
+        return GestureDetector(
+          onTap: () => widget.onProductSelected(product),
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                // Background image
+                Positioned.fill(
+                  child: _buildProductCardBackground(product),
+                ),
+                // Gradient overlay for text readability
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
+                ),
+                // Product details at bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           product.productName ?? 'Unnamed Product',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppColors.darkBlue,
+                            color: Colors.white,
                             fontSize: 16,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(1, 1),
+                                blurRadius: 3,
+                                color: Colors.black.withOpacity(0.7),
+                              ),
+                            ],
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -554,34 +521,136 @@ class _ProductListState extends State<ProductList> with SingleTickerProviderStat
                           Text(
                             '${product.productPrice!}',
                             style: TextStyle(
-                              color: AppColors.darkBlue,
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black.withOpacity(0.7),
+                                ),
+                              ],
                             ),
                           ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: Icon(
-                    _wishlistStatus[product.productId] ?? false
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: Colors.red,
-                  ),
-                  onPressed: () => _toggleWishlist(product.productId ?? ''),
                 ),
-              ),
-            ],
+                // Wishlist button
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _wishlistStatus[product.productId] ?? false
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: Colors.red,
+                      ),
+                      onPressed: () => _toggleWishlist(product.productId ?? ''),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  Widget _buildProductCardBackground(Product product) {
+    if (product.productImage == null) {
+      return Container(
+        color: AppColors.beige,
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported,
+            color: AppColors.teal,
+            size: 60,
+          ),
+        ),
+      );
+    }
+    if (_isBase64Image(product.productImage)) {
+      try {
+        final base64Data = _extractBase64Data(product.productImage!);
+        final imageBytes = base64Decode(base64Data);
+        return Image.memory(
+          imageBytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('Base64 image decode error: $error');
+            return Container(
+              color: AppColors.beige,
+              child: Center(
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: AppColors.teal,
+                  size: 60,
+                ),
+              ),
+            );
+          },
+        );
+      } catch (e) {
+        debugPrint('Error decoding base64 image: $e');
+        return Container(
+          color: AppColors.beige,
+          child: Center(
+            child: Icon(
+              Icons.image_not_supported,
+              color: AppColors.teal,
+              size: 60,
+            ),
+          ),
+        );
+      }
+    } else {
+      return Image.network(
+        product.productImage!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Network image load error for ${product.productImage}: $error');
+          return Container(
+            color: AppColors.beige,
+            child: Center(
+              child: Icon(
+                Icons.image_not_supported,
+                color: AppColors.teal,
+                size: 60,
+              ),
+            ),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: AppColors.beige,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.darkBlue,
+                strokeWidth: 2,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -589,265 +658,5 @@ class _ProductListState extends State<ProductList> with SingleTickerProviderStat
     _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     super.dispose();
-  }
-}
-
-class CartBottomSheet extends StatefulWidget {
-  final List<dynamic> cartData;
-
-  const CartBottomSheet({Key? key, required this.cartData}) : super(key: key);
-
-  @override
-  _CartBottomSheetState createState() => _CartBottomSheetState();
-}
-
-class _CartBottomSheetState extends State<CartBottomSheet> {
-  bool _isLoading = false;
-
-  Future<void> _updateQuantity(String productId, String action) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await ApiService().addOrUpdateCart(context, productId, action);
-      // Refresh cart data
-      final updatedCart = await ApiService().getCartList(context);
-      if (mounted && updatedCart != null) {
-        setState(() {
-          widget.cartData.clear();
-          widget.cartData.addAll(updatedCart);
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update cart: $e'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _removeCartItem(String productId) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await ApiService().removeCartItem(context, productId);
-      // Refresh cart data
-      final updatedCart = await ApiService().getCartList(context);
-      if (mounted && updatedCart != null) {
-        setState(() {
-          widget.cartData.clear();
-          widget.cartData.addAll(updatedCart);
-        });
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Item removed from cart'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to remove item: $e'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _deleteCart(String cartId) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await ApiService().deleteCart(context, cartId);
-      // Close the bottom sheet
-      Navigator.pop(context);
-      // Refresh cart data
-      final updatedCart = await ApiService().getCartList(context);
-      if (mounted && updatedCart != null) {
-        setState(() {
-          widget.cartData.clear();
-          widget.cartData.addAll(updatedCart);
-        });
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cart cleared'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to clear cart: $e'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.cartData.isEmpty || widget.cartData[0]['items'].isEmpty) {
-      // This should not be reached due to check in _showCartBottomSheet
-      return Container(
-        padding: EdgeInsets.all(16),
-        child: Center(
-          child: Text(
-            'Your cart is empty',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.teal,
-            ),
-          ),
-        ),
-      );
-    }
-
-    final cart = widget.cartData[0];
-    final String? cartId = cart['cartId'];
-
-    // Safely parse totalPrice (handles string, number, or null)
-    String totalPriceStr = cart['totalPrice']?.toString() ?? '0';
-    totalPriceStr = totalPriceStr.replaceAll(RegExp(r'[^\d.-]'), ''); // Strip non-numeric chars
-    final double totalPrice = double.tryParse(totalPriceStr) ?? 0.0;
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      maxChildSize: 0.9,
-      minChildSize: 0.5,
-      expand: false,
-      builder: (context, scrollController) => Container(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Your Cart',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkBlue,
-                  ),
-                ),
-                if (cartId != null)
-                  TextButton(
-                    onPressed: _isLoading ? null : () => _deleteCart(cartId),
-                    child: Text(
-                      'Clear Cart',
-                      style: TextStyle(
-                        color: AppColors.teal,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: cart['items'].length,
-                itemBuilder: (context, index) {
-                  final item = cart['items'][index];
-                  // Get the actual productId string from the item
-                  final String productId = item['productId'].toString();
-                  final quantity = item['quantity'] ?? 0;
-
-                  // Get product details
-                  final String productName = item['productName'] ?? 'Unnamed Product';
-
-                  // Safely parse price (handles string, number, or null, with non-numeric stripping)
-                  String priceStr = item['productPrice']?.toString() ?? '0';
-                  priceStr = priceStr.replaceAll(RegExp(r'[^\d.-]'), ''); // Strip currency/symbols
-                  final double price = double.tryParse(priceStr) ?? 0.0;
-
-                  final double subtotal = price * quantity;
-
-                  return ListTile(
-                    title: Text(
-                      productName,
-                      style: TextStyle(color: AppColors.darkBlue),
-                    ),
-                    subtitle: Text(
-                      'Price: $price | Subtotal: $subtotal',
-                      style: TextStyle(color: AppColors.teal),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.remove, color: AppColors.darkBlue),
-                          onPressed: _isLoading
-                              ? null
-                              : () async {
-                            if (quantity <= 1) {
-                              await _removeCartItem(productId);
-                            } else {
-                              await _updateQuantity(productId, 'decrement');
-                            }
-                          },
-                        ),
-                        Text('$quantity', style: TextStyle(fontSize: 16)),
-                        IconButton(
-                          icon: Icon(Icons.add, color: AppColors.darkBlue),
-                          onPressed: _isLoading
-                              ? null
-                              : () => _updateQuantity(productId, 'increment'),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: AppColors.teal),
-                          onPressed: _isLoading
-                              ? null
-                              : () => _removeCartItem(productId),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            Divider(),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Total: $totalPrice',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkBlue,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
